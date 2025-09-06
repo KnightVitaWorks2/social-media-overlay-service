@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Text Overlay Service</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .secondary-btn {
+            background: #2196F3;
+        }
+        .secondary-btn:hover {
+            background: #1976D2;
+        }
+        #canvas {
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            margin: 20px 0;
+            display: none;
+        }
+        .preview-area {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .style-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            color: #666;
+        }
+        .api-info {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .result-area {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 AI Image Text Overlay Service</h1>
+            <p>Add custom text overlays to AI-generated images for social media content</p>
+        </div>
+
+        <div class="api-info">
+            <h3>📡 API Endpoint</h3>
+            <p><strong>POST:</strong> <code>https://your-domain.com/api/overlay</code></p>
+            <p><strong>Webhook URL for Zapier:</strong> Use this page's URL + /api/overlay</p>
+        </div>
+
+        <form id="overlayForm">
+            <div class="input-group">
+                <label for="imageUrl">Base Image URL:</label>
+                <input type="url" id="imageUrl" placeholder="https://example.com/your-ai-generated-image.jpg" required>
+                <small>Enter the URL of your AI-generated image from Bing Image Creator</small>
+            </div>
+
+            <div class="input-group">
+                <label for="overlayText">Overlay Text:</label>
+                <input type="text" id="overlayText" placeholder="Game changer vibes!" required>
+                <small>The slogan or text to overlay on the image</small>
+            </div>
+
+            <div class="style-controls">
+                <div class="input-group">
+                    <label for="fontSize">Font Size:</label>
+                    <select id="fontSize">
+                        <option value="36px">Small (36px)</option>
+                        <option value="48px" selected>Medium (48px)</option>
+                        <option value="64px">Large (64px)</option>
+                        <option value="80px">Extra Large (80px)</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label for="fontColor">Text Color:</label>
+                    <select id="fontColor">
+                        <option value="#FFFFFF" selected>White</option>
+                        <option value="#000000">Black</option>
+                        <option value="#FF6B6B">Red</option>
+                        <option value="#4ECDC4">Teal</option>
+                        <option value="#45B7D1">Blue</option>
+                        <option value="#F7DC6F">Yellow</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label for="strokeColor">Outline Color:</label>
+                    <select id="strokeColor">
+                        <option value="#000000" selected>Black</option>
+                        <option value="#FFFFFF">White</option>
+                        <option value="#FF6B6B">Red</option>
+                        <option value="none">No Outline</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label for="textPosition">Text Position:</label>
+                    <select id="textPosition">
+                        <option value="center" selected>Center</option>
+                        <option value="top">Top</option>
+                        <option value="bottom">Bottom</option>
+                        <option value="top-left">Top Left</option>
+                        <option value="top-right">Top Right</option>
+                        <option value="bottom-left">Bottom Left</option>
+                        <option value="bottom-right">Bottom Right</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="backgroundOpacity">Text Background Opacity (0-100):</label>
+                <input type="range" id="backgroundOpacity" min="0" max="100" value="30">
+                <small>Adds a semi-transparent background behind text for better readability</small>
+            </div>
+
+            <div style="text-align: center;">
+                <button type="button" onclick="generateOverlay()">🎨 Generate Overlay</button>
+                <button type="button" class="secondary-btn" onclick="downloadImage()">💾 Download Image</button>
+                <button type="button" class="secondary-btn" onclick="copyImageData()">📋 Copy Image Data</button>
+            </div>
+        </form>
+
+        <div class="loading" id="loading">
+            <p>🎨 Generating overlay... Please wait</p>
+        </div>
+
+        <div class="preview-area">
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="result-area" id="resultArea">
+            <h3>✅ Generated Image</h3>
+            <p><strong>Image Data URL:</strong></p>
+            <textarea id="imageDataUrl" rows="4" readonly></textarea>
+            <p><small>Use this data URL directly in your Zapier workflows or social media posts</small></p>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let canvas, ctx, currentImage;
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+        });
+
+        // Main overlay generation function
+        async function generateOverlay() {
+            const imageUrl = document.getElementById('imageUrl').value;
+            const text = document.getElementById('overlayText').value;
+            
+            if (!imageUrl || !text) {
+                alert('Please provide both image URL and overlay text');
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('canvas').style.display = 'none';
+            document.getElementById('resultArea').style.display = 'none';
+
+            try {
+                await addTextOverlay(imageUrl, text);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('canvas').style.display = 'block';
+                document.getElementById('resultArea').style.display = 'block';
+                
+                // Generate data URL
+                const dataUrl = canvas.toDataURL('image/png', 0.9);
+                document.getElementById('imageDataUrl').value = dataUrl;
+                
+            } catch (error) {
+                console.error('Error generating overlay:', error);
+                alert('Error generating overlay. Please check the image URL and try again.');
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Core overlay function
+        async function addTextOverlay(imageUrl, text) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                
+                img.onload = function() {
+                    // Set canvas dimensions
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // Clear canvas
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Draw base image
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Get style settings
+                    const fontSize = document.getElementById('fontSize').value;
+                    const fontColor = document.getElementById('fontColor').value;
+                    const strokeColor = document.getElementById('strokeColor').value;
+                    const position = document.getElementById('textPosition').value;
+                    const backgroundOpacity = document.getElementById('backgroundOpacity').value / 100;
+                    
+                    // Configure text style
+                    ctx.font = `bold ${fontSize} Arial, sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    
+                    // Calculate text position
+                    const textMetrics = ctx.measureText(text);
+                    const textWidth = textMetrics.width;
+                    const textHeight = parseInt(fontSize);
+                    
+                    let x, y;
+                    switch(position) {
+                        case 'top':
+                            x = canvas.width / 2;
+                            y = textHeight;
+                            break;
+                        case 'bottom':
+                            x = canvas.width / 2;
+                            y = canvas.height - textHeight;
+                            break;
+                        case 'top-left':
+                            x = textWidth / 2 + 20;
+                            y = textHeight + 20;
+                            ctx.textAlign = 'left';
+                            break;
+                        case 'top-right':
+                            x = canvas.width - textWidth / 2 - 20;
+                            y = textHeight + 20;
+                            ctx.textAlign = 'right';
+                            break;
+                        case 'bottom-left':
+                            x = textWidth / 2 + 20;
+                            y = canvas.height - textHeight - 20;
+                            ctx.textAlign = 'left';
+                            break;
+                        case 'bottom-right':
+                            x = canvas.width - textWidth / 2 - 20;
+                            y = canvas.height - textHeight - 20;
+                            ctx.textAlign = 'right';
+                            break;
+                        default: // center
+                            x = canvas.width / 2;
+                            y = canvas.height / 2;
+                    }
+                    
+                    // Draw text background (if opacity > 0)
+                    if (backgroundOpacity > 0) {
+                        const padding = 20;
+                        ctx.fillStyle = `rgba(0, 0, 0, ${backgroundOpacity})`;
+                        ctx.fillRect(
+                            x - textWidth / 2 - padding,
+                            y - textHeight / 2 - padding / 2,
+                            textWidth + padding * 2,
+                            textHeight + padding
+                        );
+                    }
+                    
+                    // Draw text outline (stroke)
+                    if (strokeColor !== 'none') {
+                        ctx.strokeStyle = strokeColor;
+                        ctx.lineWidth = 3;
+                        ctx.lineJoin = 'round';
+                        ctx.strokeText(text, x, y);
+                    }
+                    
+                    // Draw text fill
+                    ctx.fillStyle = fontColor;
+                    ctx.fillText(text, x, y);
+                    
+                    currentImage = canvas.toDataURL('image/png', 0.9);
+                    resolve(currentImage);
+                };
+                
+                img.onerror = function() {
+                    reject(new Error('Failed to load image. Please check the URL and CORS settings.'));
+                };
+                
+                // Handle CORS issues by trying different approaches
+                if (imageUrl.includes('bing.com') || imageUrl.includes('microsoft.com')) {
+                    // For Bing images, we might need a proxy
+                    img.src = `https://api.allorigins.win/raw?url=${encodeURIComponent(imageUrl)}`;
+                } else {
+                    img.src = imageUrl;
+                }
+            });
+        }
+
+        // Download generated image
+        function downloadImage() {
+            if (!currentImage) {
+                alert('Please generate an overlay first');
+                return;
+            }
+            
+            const link = document.createElement('a');
+            link.download = 'social-media-overlay.png';
+            link.href = currentImage;
+            link.click();
+        }
+
+        // Copy image data to clipboard
+        function copyImageData() {
+            const dataUrl = document.getElementById('imageDataUrl').value;
+            if (!dataUrl) {
+                alert('Please generate an overlay first');
+                return;
+            }
+            
+            navigator.clipboard.writeText(dataUrl).then(() => {
+                alert('Image data copied to clipboard!');
+            }).catch(() => {
+                // Fallback for older browsers
+                document.getElementById('imageDataUrl').select();
+                document.execCommand('copy');
+                alert('Image data copied to clipboard!');
+            });
+        }
+
+        // API endpoint simulation for Zapier webhooks
+        // In production, this would be a server-side endpoint
+        if (window.location.pathname.includes('/api/overlay')) {
+            // This is a webhook call - handle POST data
+            if (window.location.search) {
+                const params = new URLSearchParams(window.location.search);
+                const imageUrl = params.get('image_url');
+                const text = params.get('text');
+                const style = JSON.parse(params.get('style') || '{}');
+                
+                if (imageUrl && text) {
+                    // Auto-fill form and generate
+                    document.getElementById('imageUrl').value = imageUrl;
+                    document.getElementById('overlayText').value = text;
+                    
+                    // Apply style settings
+                    if (style.font_size) document.getElementById('fontSize').value = style.font_size;
+                    if (style.color) document.getElementById('fontColor').value = style.color;
+                    if (style.stroke) document.getElementById('strokeColor').value = style.stroke;
+                    if (style.position) document.getElementById('textPosition').value = style.position;
+                    
+                    // Auto-generate on load
+                    setTimeout(generateOverlay, 1000);
+                }
+            }
+        }
+
+        // Test with sample data
+        function loadSampleData() {
+            document.getElementById('imageUrl').value = 'https://via.placeholder.com/1024x1024/4CAF50/FFFFFF?text=Sample+Cricket+Image';
+            document.getElementById('overlayText').value = 'Game Changer Vibes! 🏏';
+            document.getElementById('fontSize').value = '64px';
+            document.getElementById('fontColor').value = '#FFFFFF';
+            document.getElementById('strokeColor').value = '#000000';
+            document.getElementById('textPosition').value = 'center';
+            document.getElementById('backgroundOpacity').value = '40';
+        }
+
+        // Add sample data button
+        window.onload = function() {
+            const sampleBtn = document.createElement('button');
+            sampleBtn.textContent = '🎯 Load Sample Data';
+            sampleBtn.className = 'secondary-btn';
+            sampleBtn.onclick = loadSampleData;
+            document.querySelector('.container').appendChild(sampleBtn);
+        };
+    </script>
+</body>
+</html>
